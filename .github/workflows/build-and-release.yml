@@ -8,6 +8,8 @@ permissions:
 on:
   push:
     branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
 
 jobs:
   # 代码质量检查
@@ -27,6 +29,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Run tests
+        run: npm test
 
       - name: Run TypeScript check
         run: npx tsc --noEmit
