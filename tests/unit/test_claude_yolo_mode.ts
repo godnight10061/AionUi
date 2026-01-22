@@ -4,40 +4,59 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { describe, expect, it, jest } from '@jest/globals';
+import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import { AcpConnection } from '../../src/agent/acp/AcpConnection';
 import { AcpAgent } from '../../src/agent/acp';
+import type { AcpResponse } from '../../src/types/acpTypes';
 
 describe('Claude YOLO mode', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('sets ACP session mode to bypassPermissions when enabled', async () => {
     jest.spyOn(AcpConnection.prototype, 'connect').mockResolvedValue(undefined);
     jest.spyOn(AcpConnection.prototype, 'getInitializeResponse').mockReturnValue(null);
+    jest.spyOn(AcpConnection.prototype, 'hasActiveSession', 'get').mockReturnValue(true);
+    const setSessionModeSpy = jest.spyOn(AcpConnection.prototype, 'setSessionMode').mockResolvedValue({ jsonrpc: '2.0', id: 1 } as AcpResponse);
 
-    jest.spyOn(AcpConnection.prototype, 'newSession').mockImplementation(async function (this: unknown) {
-      // Mimic AcpConnection.newSession side-effect for hasActiveSession checks
-      (this as { sessionId: string | null }).sessionId = 'session-1';
-      return { jsonrpc: '2.0', id: 0, sessionId: 'session-1' } as any;
-    });
-
-    const sendRequestSpy = jest.spyOn(AcpConnection.prototype as any, 'sendRequest').mockResolvedValue({});
-
+    const workspace = process.cwd();
     const agent = new AcpAgent({
       id: 'conv-1',
       backend: 'claude',
-      workingDir: process.cwd(),
+      workingDir: workspace,
       onStreamEvent: () => {},
       extra: {
         backend: 'claude',
-        workspace: process.cwd(),
+        workspace,
         yoloMode: true,
-      } as any,
+      },
     });
 
     await agent.start();
 
-    expect(sendRequestSpy).toHaveBeenCalledWith('session/set_mode', {
-      sessionId: 'session-1',
-      modeId: 'bypassPermissions',
+    expect(setSessionModeSpy).toHaveBeenCalledWith('bypassPermissions');
+  });
+
+  it('fails to start when YOLO mode is enabled but bypassPermissions cannot be set', async () => {
+    jest.spyOn(AcpConnection.prototype, 'connect').mockResolvedValue(undefined);
+    jest.spyOn(AcpConnection.prototype, 'getInitializeResponse').mockReturnValue(null);
+    jest.spyOn(AcpConnection.prototype, 'hasActiveSession', 'get').mockReturnValue(true);
+    jest.spyOn(AcpConnection.prototype, 'setSessionMode').mockRejectedValue(new Error('session/set_mode failed'));
+
+    const workspace = process.cwd();
+    const agent = new AcpAgent({
+      id: 'conv-1',
+      backend: 'claude',
+      workingDir: workspace,
+      onStreamEvent: () => {},
+      extra: {
+        backend: 'claude',
+        workspace,
+        yoloMode: true,
+      },
     });
+
+    await expect(agent.start()).rejects.toThrow('[ACP] Failed to enable Claude YOLO mode (bypassPermissions):');
   });
 });

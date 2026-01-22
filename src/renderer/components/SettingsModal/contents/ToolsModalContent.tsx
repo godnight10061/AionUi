@@ -244,24 +244,25 @@ const ToolsModalContent: React.FC = () => {
   }, [data]);
 
   useEffect(() => {
-    ConfigStorage.get('tools.imageGenerationModel')
-      .then((data) => {
-        if (!data) return;
-        setImageGenerationModel(data);
-      })
-      .catch((error) => {
+    const loadConfigs = async () => {
+      try {
+        const data = await ConfigStorage.get('tools.imageGenerationModel');
+        if (data) {
+          setImageGenerationModel(data);
+        }
+      } catch (error) {
         console.error('Failed to load image generation model config:', error);
-      });
-  }, []);
+      }
 
-  useEffect(() => {
-    ConfigStorage.get('acp.config')
-      .then((config) => {
+      try {
+        const config = await ConfigStorage.get('acp.config');
         setClaudeYoloMode(Boolean(config?.claude?.yoloMode));
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error('Failed to load ACP config:', error);
-      });
+      }
+    };
+
+    void loadConfigs();
   }, []);
 
   // Sync imageGenerationModel apiKey when provider apiKey changes

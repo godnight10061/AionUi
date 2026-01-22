@@ -183,7 +183,8 @@ export class AcpAgent {
         try {
           await this.connection.setSessionMode('bypassPermissions');
         } catch (error) {
-          console.warn('[ACP] Failed to enable Claude YOLO mode (bypassPermissions):', error);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          throw new Error(`[ACP] Failed to enable Claude YOLO mode (bypassPermissions): ${errorMessage}`);
         }
       }
       this.emitStatusMessage('session_active');
