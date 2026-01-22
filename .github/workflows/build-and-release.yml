@@ -47,7 +47,7 @@ jobs:
     name: Build ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
     needs: code-quality
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+    if: github.repository == 'iOfficeAI/AionUi' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
 
     strategy:
       fail-fast: false
@@ -432,6 +432,7 @@ jobs:
     needs: build
     # 关键：只在首次失败时触发，避免无限循环
     if: |
+      github.repository == 'iOfficeAI/AionUi' &&
       failure() &&
       github.run_attempt == 1 &&
       (github.event_name == 'push' || github.event_name == 'schedule')
@@ -489,7 +490,7 @@ jobs:
     name: Create Tag from Branch
     runs-on: ubuntu-latest
     needs: [ build ]
-    if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    if: github.repository == 'iOfficeAI/AionUi' && success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
     outputs:
       tag_name: ${{ steps.create_tag.outputs.tag_name }}
       is_dev: ${{ steps.create_tag.outputs.is_dev }}
@@ -585,7 +586,7 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [ build, create-tag ]
-    if: always() && needs.create-tag.result == 'success'
+    if: github.repository == 'iOfficeAI/AionUi' && always() && needs.create-tag.result == 'success'
     environment: ${{ needs.create-tag.outputs.is_dev == 'true' && 'dev-release' || 'release' }}
     
     steps:
