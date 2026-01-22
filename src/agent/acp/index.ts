@@ -61,6 +61,7 @@ export interface AcpAgentConfig {
     customWorkspace?: boolean;
     customArgs?: string[];
     customEnv?: Record<string, string>;
+    yoloMode?: boolean;
   };
   onStreamEvent: (data: IResponseMessage) => void;
   onSignalEvent?: (data: IResponseMessage) => void; // 新增：仅发送信号，不更新UI
@@ -76,6 +77,7 @@ export class AcpAgent {
     customWorkspace?: boolean;
     customArgs?: string[];
     customEnv?: Record<string, string>;
+    yoloMode?: boolean;
   };
   private connection: AcpConnection;
   private adapter: AcpAdapter;
@@ -99,6 +101,7 @@ export class AcpAgent {
       customWorkspace: false, // Default to system workspace
       customArgs: config.customArgs,
       customEnv: config.customEnv,
+      yoloMode: false,
     };
 
     this.connection = new AcpConnection();
@@ -156,19 +159,32 @@ export class AcpAgent {
     try {
       this.emitStatusMessage('connecting');
 
-      await Promise.race([
-        this.connection.connect(this.extra.backend, this.extra.cliPath, this.extra.workspace, this.extra.customArgs, this.extra.customEnv),
-        new Promise((_, reject) =>
-          setTimeout(() => {
-            reject(new Error('Connection timeout after 70 seconds'));
-          }, 70000)
-        ),
-      ]);
+      let connectTimeoutId: NodeJS.Timeout | null = null;
+      const connectTimeoutPromise = new Promise<never>((_, reject) => {
+        connectTimeoutId = setTimeout(() => reject(new Error('Connection timeout after 70 seconds')), 70000);
+      });
+
+      try {
+        await Promise.race([this.connection.connect(this.extra.backend, this.extra.cliPath, this.extra.workspace, this.extra.customArgs, this.extra.customEnv), connectTimeoutPromise]);
+      } finally {
+        if (connectTimeoutId) {
+          clearTimeout(connectTimeoutId);
+        }
+      }
       this.emitStatusMessage('connected');
       await this.performAuthentication();
       // 避免重复创建会话：仅当尚无活动会话时再创建
       if (!this.connection.hasActiveSession) {
         await this.connection.newSession(this.extra.workspace);
+      }
+
+      // Claude Code "YOLO" mode: bypass all permission checks (equivalent to --dangerously-skip-permissions)
+      if (this.extra.backend === 'claude' && this.extra.yoloMode) {
+        try {
+          await this.connection.setSessionMode('bypassPermissions');
+        } catch (error) {
+          console.warn('[ACP] Failed to enable Claude YOLO mode (bypassPermissions):', error);
+        }
       }
       this.emitStatusMessage('session_active');
     } catch (error) {
