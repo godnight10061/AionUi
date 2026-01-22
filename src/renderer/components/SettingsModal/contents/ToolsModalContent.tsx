@@ -299,22 +299,21 @@ const ToolsModalContent: React.FC = () => {
     });
   };
 
-  const handleClaudeYoloModeChange = (enabled: boolean) => {
+  const handleClaudeYoloModeChange = async (enabled: boolean) => {
     setClaudeYoloMode(enabled);
-    ConfigStorage.get('acp.config')
-      .then((config) => {
-        const nextConfig: IConfigStorageRefer['acp.config'] = {
-          ...(config || {}),
-          claude: {
-            ...(config?.claude || {}),
-            yoloMode: enabled,
-          },
-        };
-        return ConfigStorage.set('acp.config', nextConfig);
-      })
-      .catch((error) => {
-        console.error('Failed to update ACP config:', error);
-      });
+    try {
+      const config = await ConfigStorage.get('acp.config');
+      const nextConfig: IConfigStorageRefer['acp.config'] = {
+        ...(config || {}),
+        claude: {
+          ...(config?.claude || {}),
+          yoloMode: enabled,
+        },
+      };
+      await ConfigStorage.set('acp.config', nextConfig);
+    } catch (error) {
+      console.error('Failed to update ACP config:', error);
+    }
   };
 
   const viewMode = useSettingsViewMode();

@@ -16,6 +16,7 @@ import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { AcpConnection } from './AcpConnection';
+import { CLAUDE_YOLO_SESSION_MODE } from './constants';
 
 /**
  * Initialize response result interface
@@ -181,10 +182,10 @@ export class AcpAgent {
       // Claude Code "YOLO" mode: bypass all permission checks (equivalent to --dangerously-skip-permissions)
       if (this.extra.backend === 'claude' && this.extra.yoloMode) {
         try {
-          await this.connection.setSessionMode('bypassPermissions');
+          await this.connection.setSessionMode(CLAUDE_YOLO_SESSION_MODE);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          throw new Error(`[ACP] Failed to enable Claude YOLO mode (bypassPermissions): ${errorMessage}`);
+          throw new Error(`[ACP] Failed to enable Claude YOLO mode (${CLAUDE_YOLO_SESSION_MODE}): ${errorMessage}`);
         }
       }
       this.emitStatusMessage('session_active');

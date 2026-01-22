@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import { AcpConnection } from '../../src/agent/acp/AcpConnection';
 import { AcpAgent } from '../../src/agent/acp';
 import type { AcpResponse } from '../../src/types/acpTypes';
+import { CLAUDE_YOLO_SESSION_MODE } from '../../src/agent/acp/constants';
 
 describe('Claude YOLO mode', () => {
   afterEach(() => {
@@ -35,7 +36,7 @@ describe('Claude YOLO mode', () => {
 
     await agent.start();
 
-    expect(setSessionModeSpy).toHaveBeenCalledWith('bypassPermissions');
+    expect(setSessionModeSpy).toHaveBeenCalledWith(CLAUDE_YOLO_SESSION_MODE);
   });
 
   it('fails to start when YOLO mode is enabled but bypassPermissions cannot be set', async () => {
