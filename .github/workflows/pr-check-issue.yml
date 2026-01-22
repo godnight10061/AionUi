@@ -1,4 +1,4 @@
-name: '🔗 PR Issue Link Check & Review'
+name: PR Issue Link Check & Review
 
 on:
   pull_request:
@@ -84,24 +84,26 @@ jobs:
             }
 
             // Post comment asking for issue link
-            const commentBody = `<!-- pr-issue-check-bot -->
-
-Hi @${prAuthor},
-
-Thank you for your contribution! 🎉 The **automated code review** is already in progress.
-
-However, we noticed this PR is **not linked to an issue**. To help us track changes, please:
-
-1. **Create an Issue** - Open a new issue describing what this PR addresses (bug fix, feature, enhancement, etc.)
-2. **Link this PR to the Issue** - Add one of the following to your PR description:
-   - \`Fixes #<issue_number>\`
-   - \`Closes #<issue_number>\`
-   - \`Resolves #<issue_number>\`
-
-This helps us maintain a clear history of issues and their resolutions.
-
----
-📝 *Once you link an issue, this comment will be automatically removed.*`;
+            const commentBody = [
+              '<!-- pr-issue-check-bot -->',
+              '',
+              `Hi @${prAuthor},`,
+              '',
+              'Thank you for your contribution. The automated code review is already in progress.',
+              '',
+              'However, we noticed this PR is not linked to an issue. To help us track changes, please:',
+              '',
+              '1. Create an issue - Open a new issue describing what this PR addresses (bug fix, feature, enhancement, etc.)',
+              '2. Link this PR to the issue - Add one of the following to your PR description:',
+              '   - `Fixes #<issue_number>`',
+              '   - `Closes #<issue_number>`',
+              '   - `Resolves #<issue_number>`',
+              '',
+              'This helps us maintain a clear history of issues and their resolutions.',
+              '',
+              '---',
+              '*Once you link an issue, this comment will be automatically removed.*',
+            ].join('\\n');
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -177,36 +179,38 @@ This helps us maintain a clear history of issues and their resolutions.
               return;
             }
 
-            const summaryBody = `<!-- pr-summary-bot -->
-
-## 📋 PR Summary
-
-Hello @${prAuthor}, I'm working on reviewing this pull request. Here's a quick summary:
-
-### 📊 Stats
-| Metric | Value |
-|--------|-------|
-| Files Changed | ${fileCount} |
-| Additions | +${additions} |
-| Deletions | -${deletions} |
-
-### 📁 Files by Type
-${fileSummary}
-
-### 🔍 Review Status
-- ⏳ Automated code review in progress...
-
----
-**Using AI Review**
-
-You can request assistance at any point by creating a comment:
-| Command | Description |
-|---------|-------------|
-| \`@gemini-cli /review\` | Request a code review |
-| \`@gemini-cli <question>\` | Ask a question about this PR |
-
----
-*This is an automated summary. The detailed code review will follow shortly.*`;
+            const summaryBody = [
+              '<!-- pr-summary-bot -->',
+              '',
+              '## PR Summary',
+              '',
+              `Hello @${prAuthor}, I'm working on reviewing this pull request. Here's a quick summary:`,
+              '',
+              '### Stats',
+              '| Metric | Value |',
+              '|--------|-------|',
+              `| Files Changed | ${fileCount} |`,
+              `| Additions | +${additions} |`,
+              `| Deletions | -${deletions} |`,
+              '',
+              '### Files by Type',
+              fileSummary.trimEnd(),
+              '',
+              '### Review Status',
+              '- Automated code review in progress...',
+              '',
+              '---',
+              '**Using AI Review**',
+              '',
+              'You can request assistance at any point by creating a comment:',
+              '| Command | Description |',
+              '|---------|-------------|',
+              '| `@gemini-cli /review` | Request a code review |',
+              '| `@gemini-cli <question>` | Ask a question about this PR |',
+              '',
+              '---',
+              '*This is an automated summary. The detailed code review will follow shortly.*',
+            ].join('\\n');
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
