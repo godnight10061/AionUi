@@ -46,10 +46,12 @@ describe('composeMessage tool_group immutability', () => {
     expect(listAfterExecuting).not.toBe(initialList);
     expect(listAfterExecuting).toHaveLength(2);
 
-    const toolMessageExecuting = listAfterExecuting.find((m) => m.type === 'tool_group');
-    expect(toolMessageExecuting).toBeDefined();
-    expect(toolMessageExecuting?.type).toBe('tool_group');
-    expect((toolMessageExecuting as any).content[0].status).toBe('Executing');
+    type ToolGroupMessage = Extract<TMessage, { type: 'tool_group' }>;
+    const isToolGroupMessage = (m: TMessage): m is ToolGroupMessage => m.type === 'tool_group';
+
+    const toolMessageExecuting = listAfterExecuting.find(isToolGroupMessage);
+    if (!toolMessageExecuting) throw new Error('Expected a tool_group message');
+    expect(toolMessageExecuting.content[0].status).toBe('Executing');
 
     const toolGroupConfirming: TMessage = {
       id: 'msg-tool-2',
@@ -76,10 +78,11 @@ describe('composeMessage tool_group immutability', () => {
     const listAfterConfirming = composeMessage(toolGroupConfirming, listAfterExecuting);
     expect(listAfterConfirming).not.toBe(listAfterExecuting);
 
-    const toolMessageConfirming = listAfterConfirming.find((m) => m.type === 'tool_group') as any;
-    expect(toolMessageConfirming?.content[0].status).toBe('Confirming');
-    expect(toolMessageConfirming?.content[0].confirmationDetails).toBeDefined();
-    expect(toolMessageConfirming?.content[0].confirmationDetails.type).toBe('info');
+    const toolMessageConfirming = listAfterConfirming.find(isToolGroupMessage);
+    if (!toolMessageConfirming) throw new Error('Expected a tool_group message');
+    expect(toolMessageConfirming.content[0].status).toBe('Confirming');
+    expect(toolMessageConfirming.content[0].confirmationDetails).toBeDefined();
+    expect(toolMessageConfirming.content[0].confirmationDetails?.type).toBe('info');
   });
 });
 
