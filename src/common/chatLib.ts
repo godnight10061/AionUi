@@ -421,34 +421,42 @@ export const composeMessage = (message: TMessage | undefined, list: TMessage[] |
   };
 
   if (message.type === 'tool_group') {
-    const tools = message.content.slice();
-    for (let i = 0, len = list.length; i < len; i++) {
-      const existingMessage = list[i];
-      if (existingMessage.type === 'tool_group') {
-        if (!existingMessage.content.length) continue;
-        // Create a new content array with merged tool data
-        let change = false;
-        const newContent = existingMessage.content.map((tool) => {
-          const newToolIndex = tools.findIndex((t) => t.callId === tool.callId);
-          if (newToolIndex === -1) return tool;
-          // Create new object instead of mutating original
-          const merged = { ...tool, ...tools[newToolIndex] };
-          change = true;
-          tools.splice(newToolIndex, 1);
-          return merged;
-        });
-        // Only return if we actually matched and merged some tools
-        // Otherwise continue checking other tool_groups
-        if (change) {
-          return updateMessage(i, { ...existingMessage, content: newContent }, true);
-        }
-      }
+    const remainingTools = message.content.slice();
+    let didUpdateExisting = false;
+
+    const updatedList = list.map((existingMessage) => {
+      if (existingMessage.type !== 'tool_group') return existingMessage;
+      if (!existingMessage.content.length) return existingMessage;
+
+      let didMergeIntoThisMessage = false;
+      const newContent = existingMessage.content.map((tool) => {
+        const newToolIndex = remainingTools.findIndex((t) => t.callId === tool.callId);
+        if (newToolIndex === -1) return tool;
+        didMergeIntoThisMessage = true;
+        // Create new object instead of mutating original
+        const merged = { ...tool, ...remainingTools[newToolIndex] };
+        remainingTools.splice(newToolIndex, 1);
+        return merged;
+      });
+
+      if (!didMergeIntoThisMessage) return existingMessage;
+      didUpdateExisting = true;
+      const updatedMessage = { ...existingMessage, content: newContent } as TMessage;
+      messageHandler('update', updatedMessage);
+      return updatedMessage;
+    });
+
+    const baseList = didUpdateExisting ? updatedList : list;
+
+    // If there are new tool calls, append them as a new tool_group message (without mutating inputs)
+    if (remainingTools.length) {
+      const insertMessage = { ...message, content: remainingTools } as TMessage;
+      messageHandler('insert', insertMessage);
+      return baseList.concat(insertMessage);
     }
-    if (tools.length) {
-      message.content = tools;
-      return pushMessage(message);
-    }
-    return list;
+
+    // No new tools appended; return a new list only if something was updated
+    return didUpdateExisting ? baseList : list;
   }
 
   // Handle Gemini tool_call message merging
