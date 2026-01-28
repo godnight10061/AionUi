@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from '@jest/globals';
-import type { TMessage } from '../../src/common/chatLib';
+import type { IMessageToolGroup, TMessage } from '../../src/common/chatLib';
 import { composeMessage } from '../../src/common/chatLib';
 
 describe('composeMessage tool_group immutability', () => {
@@ -19,7 +19,7 @@ describe('composeMessage tool_group immutability', () => {
       conversation_id,
       type: 'text',
       position: 'right',
-      content: { content: '帮我整理我的文件夹' },
+      content: { content: 'Organize my folder' },
     };
 
     const toolGroupExecuting: TMessage = {
@@ -46,8 +46,7 @@ describe('composeMessage tool_group immutability', () => {
     expect(listAfterExecuting).not.toBe(initialList);
     expect(listAfterExecuting).toHaveLength(2);
 
-    type ToolGroupMessage = Extract<TMessage, { type: 'tool_group' }>;
-    const isToolGroupMessage = (m: TMessage): m is ToolGroupMessage => m.type === 'tool_group';
+    const isToolGroupMessage = (m: TMessage): m is IMessageToolGroup => m.type === 'tool_group';
 
     const toolMessageExecuting = listAfterExecuting.find(isToolGroupMessage);
     if (!toolMessageExecuting) throw new Error('Expected a tool_group message');
