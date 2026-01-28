@@ -421,7 +421,9 @@ export const composeMessage = (message: TMessage | undefined, list: TMessage[] |
   };
 
   if (message.type === 'tool_group') {
-    const remainingTools = message.content.slice();
+    const remainingToolsMap = new Map(message.content.map((t) => [t.callId, t] as const));
+    if (remainingToolsMap.size === 0) return list;
+
     let didUpdateExisting = false;
 
     const updatedList = list.map((existingMessage) => {
@@ -430,13 +432,12 @@ export const composeMessage = (message: TMessage | undefined, list: TMessage[] |
 
       let didMergeIntoThisMessage = false;
       const newContent = existingMessage.content.map((tool) => {
-        const newToolIndex = remainingTools.findIndex((t) => t.callId === tool.callId);
-        if (newToolIndex === -1) return tool;
+        const newToolData = remainingToolsMap.get(tool.callId);
+        if (!newToolData) return tool;
         didMergeIntoThisMessage = true;
+        remainingToolsMap.delete(tool.callId);
         // Create new object instead of mutating original
-        const merged = { ...tool, ...remainingTools[newToolIndex] };
-        remainingTools.splice(newToolIndex, 1);
-        return merged;
+        return { ...tool, ...newToolData };
       });
 
       if (!didMergeIntoThisMessage) return existingMessage;
@@ -449,8 +450,9 @@ export const composeMessage = (message: TMessage | undefined, list: TMessage[] |
     const baseList = didUpdateExisting ? updatedList : list;
 
     // If there are new tool calls, append them as a new tool_group message (without mutating inputs)
-    if (remainingTools.length) {
-      const insertMessage = { ...message, content: remainingTools } as TMessage;
+    if (remainingToolsMap.size > 0) {
+      const newTools = Array.from(remainingToolsMap.values());
+      const insertMessage = { ...message, content: newTools } as TMessage;
       messageHandler('insert', insertMessage);
       return baseList.concat(insertMessage);
     }
