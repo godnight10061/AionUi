@@ -5,8 +5,8 @@
  */
 
 import { describe, expect, it } from '@jest/globals';
-import type { IMessageToolGroup, TMessage } from '../../src/common/chatLib';
-import { composeMessage } from '../../src/common/chatLib';
+import type { IMessageToolGroup, TMessage } from '@/common/chatLib';
+import { composeMessage } from '@/common/chatLib';
 
 describe('composeMessage tool_group immutability', () => {
   it('should not mutate the existing list and should return new references for tool_group updates', () => {
