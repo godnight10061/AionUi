@@ -469,8 +469,8 @@ export const composeMessage = (message: TMessage | undefined, list: TMessage[] |
       messageHandler('insert', insertMessage);
       return baseList.concat(insertMessage);
     }
-    // No new tools appended; return a new list only if something was updated
-    return didUpdateExisting ? baseList : list;
+    // No new tools appended; return either the updated list or the original list
+    return baseList;
   }
 
   // Handle Gemini tool_call message merging
