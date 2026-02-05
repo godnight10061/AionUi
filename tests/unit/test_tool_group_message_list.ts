@@ -9,6 +9,8 @@ import type { IMessageToolGroup, TMessage } from '@/common/chatLib';
 import { composeMessage } from '@/common/chatLib';
 
 describe('composeMessage tool_group immutability', () => {
+  const isToolGroupMessage = (m: TMessage): m is IMessageToolGroup => m.type === 'tool_group';
+
   it('should not mutate the existing list and should return new references for tool_group updates', () => {
     const conversation_id = 'conv-1';
     const callId = 'call-1';
@@ -45,8 +47,6 @@ describe('composeMessage tool_group immutability', () => {
     expect(initialList).toHaveLength(1);
     expect(listAfterExecuting).not.toBe(initialList);
     expect(listAfterExecuting).toHaveLength(2);
-
-    const isToolGroupMessage = (m: TMessage): m is IMessageToolGroup => m.type === 'tool_group';
 
     const toolMessageExecuting = listAfterExecuting.find(isToolGroupMessage);
     if (!toolMessageExecuting) throw new Error('Expected a tool_group message');
@@ -194,8 +194,6 @@ describe('composeMessage tool_group immutability', () => {
     expect(mergedList).not.toBe(initialList);
     expect(mergedList).toHaveLength(3);
 
-    const isToolGroupMessage = (m: TMessage): m is IMessageToolGroup => m.type === 'tool_group';
-
     const updatedA = mergedList.find((m) => m.id === 'msg-tool-a');
     if (!updatedA || !isToolGroupMessage(updatedA)) throw new Error('Expected tool_group A');
     expect(updatedA.content[0].status).toBe('Success');
@@ -257,7 +255,6 @@ describe('composeMessage tool_group immutability', () => {
     expect(mergedList).toHaveLength(2);
     expect(mergedList[0]).toBe(existingToolGroup);
 
-    const isToolGroupMessage = (m: TMessage): m is IMessageToolGroup => m.type === 'tool_group';
     const inserted = mergedList[1];
     if (!isToolGroupMessage(inserted)) throw new Error('Expected inserted tool_group message');
     expect(inserted.content).toHaveLength(1);
