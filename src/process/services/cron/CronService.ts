@@ -325,8 +325,6 @@ class CronService {
       // Send message to conversation directly via WorkerManage (not IPC)
       // IPC invoke doesn't work in main process - it's for renderer->main communication
       const messageText = job.target.payload.text;
-      const msgId = uuid();
-
       // Get or build task from WorkerManage
       // For cron jobs, we need yoloMode=true (auto-approve)
       // Reuse existing task if possible to avoid unnecessary reconnection
@@ -391,12 +389,14 @@ class CronService {
         triggeredAt: Date.now(),
       };
 
-      // Call sendMessage directly on the task
-      // Different agents use different parameter names: Gemini uses 'input', ACP/Codex use 'content'
-      if (task.type === 'codex' || task.type === 'acp') {
-        await task.sendMessage({ content: messageText, msg_id: msgId, files: workspaceFiles, cronMeta });
+      // System-triggered cron runs must not create a synthetic right-side user bubble.
+      // ACP/Codex-compatible managers already skip that when msg_id is omitted.
+      // Gemini still needs msg_id for its worker protocol, so mark it explicitly.
+      if (task.type === 'gemini') {
+        const msgId = uuid();
+        await task.sendMessage({ input: messageText, msg_id: msgId, files: workspaceFiles, cronMeta, systemTrigger: true });
       } else {
-        await task.sendMessage({ input: messageText, msg_id: msgId, files: workspaceFiles, cronMeta });
+        await task.sendMessage({ content: messageText, files: workspaceFiles, cronMeta });
       }
 
       // Success

@@ -310,37 +310,41 @@ export class GeminiAgentManager extends BaseAgentManager<
     }
   }
 
-  async sendMessage(data: { input: string; msg_id: string; files?: string[]; cronMeta?: CronMessageMeta }) {
-    const message: TMessage = {
-      id: data.msg_id,
-      type: 'text',
-      position: 'right',
-      conversation_id: this.conversation_id,
-      content: {
-        content: data.input,
-        ...(data.cronMeta && { cronMeta: data.cronMeta }),
-      },
-    };
-    addMessage(this.conversation_id, message);
-    // Update conversation modifyTime so history list sorts correctly.
-    // Without this, chat.history.refresh fires before modifyTime is updated,
-    // causing stale sorting until a manual page refresh.
-    try {
-      getDatabase().updateConversation(this.conversation_id, {});
-    } catch {
-      // Conversation might not exist in DB yet
-    }
-    // Emit user_content IPC for cron messages so the frontend can display them
-    // even if the component mounts after the DB save but before the DB load completes.
-    // Normal user-initiated messages are added locally by the frontend, so only cron needs this.
-    if (data.cronMeta) {
-      const userResponseMessage: IResponseMessage = {
-        type: 'user_content',
+  async sendMessage(data: { input: string; msg_id: string; files?: string[]; cronMeta?: CronMessageMeta; systemTrigger?: boolean }) {
+    const { systemTrigger, ...workerMessage } = data;
+
+    if (!systemTrigger) {
+      const message: TMessage = {
+        id: data.msg_id,
+        type: 'text',
+        position: 'right',
         conversation_id: this.conversation_id,
-        msg_id: data.msg_id,
-        data: { content: message.content.content, cronMeta: data.cronMeta },
+        content: {
+          content: data.input,
+          ...(data.cronMeta && { cronMeta: data.cronMeta }),
+        },
       };
-      ipcBridge.geminiConversation.responseStream.emit(userResponseMessage);
+      addMessage(this.conversation_id, message);
+      // Update conversation modifyTime so history list sorts correctly.
+      // Without this, chat.history.refresh fires before modifyTime is updated,
+      // causing stale sorting until a manual page refresh.
+      try {
+        getDatabase().updateConversation(this.conversation_id, {});
+      } catch {
+        // Conversation might not exist in DB yet
+      }
+      // Emit user_content IPC for cron messages so the frontend can display them
+      // even if the component mounts after the DB save but before the DB load completes.
+      // System-triggered cron runs skip the synthetic user bubble entirely.
+      if (data.cronMeta) {
+        const userResponseMessage: IResponseMessage = {
+          type: 'user_content',
+          conversation_id: this.conversation_id,
+          msg_id: data.msg_id,
+          data: { content: message.content.content, cronMeta: data.cronMeta },
+        };
+        ipcBridge.geminiConversation.responseStream.emit(userResponseMessage);
+      }
     }
 
     // Check if MCP config has changed since worker was initialized
@@ -365,7 +369,7 @@ export class GeminiAgentManager extends BaseAgentManager<
           });
         });
       })
-      .then(() => super.sendMessage(data))
+      .then(() => super.sendMessage(workerMessage))
       .finally(() => {
         cronBusyGuard.setProcessing(this.conversation_id, false);
       });
